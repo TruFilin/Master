@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Регистрация</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        form {
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        input {
+            margin-bottom: 10px;
+            padding: 10px;
+            width: 100%;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px;
+            background-color: #5cb85c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #4cae4c;
+        }
+        .login-button {
+            background-color: #007bff; /* Цвет для кнопки "Вход" */
+            margin-top: 10px; /* Отступ сверху */
+        }
+        .login-button:hover {
+            background-color: #0056b3; /* Цвет при наведении */
+        }
+    </style>
+</head>
+<body>
+
+    <form id="registration-form">
+        <h2>Регистрация</h2>
+        <input type="text" id="username" placeholder="Имя пользователя" required>
+        <input type="password" id="password" placeholder="Пароль" required>
+        <button type="submit">Зарегистрироваться</button>
+    </form>
+
+    <h3>Уже зарегистрированы?</h3>
+    <a href="{% url 'login' %}">
+        <button class="login-button">Войти</button>
+    </a>
+
+    <script>
+        document.getElementById('registration-form').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            await register(username, password);
+        });
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        async function register(username, password) {
+            const csrftoken = getCookie('csrftoken');  // Получаем CSRF-токен
+            try {
+                const response = await fetch('http://localhost:8000/chat/api/register/', {
+                    method: 'POST',  // Убедитесь, что метод POST указан
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken,
+                    },
+                    body: JSON.stringify({ username, password }),
+                });
+
+                const responseText = await response.text();  // Получаем ответ как текст
+
+                if (response.ok) {
+                    const data = JSON.parse(responseText);  // Парсинг только если ответ успешный
+                    localStorage.setItem('access_token', data.access);
+                    window.location.href = '/chat/group-chats'; // Перенаправление на страницу с чатами
+                } else {
+                    console.error('Ошибка регистрации:', responseText);  // Логируем текст ответа
+                    alert('Ошибка регистрации: ' + responseText); // Сообщение пользователю
+                }
+            } catch (error) {
+                console.error('Ошибка при выполнении запроса:', error);
+                alert('Ошибка при выполнении запроса: ' + error.message); // Сообщение пользователю
+            }
+        }
+    </script>
+
+</body>
+</html>>

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Список пользователей</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        .user-list {
+            margin-bottom: 20px;
+        }
+        .user {
+            padding: 10px;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px;
+            background-color: #5cb85c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+        button:hover {
+            background-color: #4cae4c;
+        }
+        /* Стиль для модального окна */
+        .modal {
+            display: none; /* Скрываем модальное окно по умолчанию */
+            position: fixed;
+            z-index: 1; /* На переднем плане */
+            left: 0;
+            top: 0;
+            width: 100%; /* Полная ширина */
+            height: 100%; /* Полная высота */
+            overflow: auto; /* Прокрутка, если нужно */
+            background-color: rgb(0,0,0); /* Полупрозрачный черный фон */
+            background-color: rgba(0,0,0,0.4); /* Полупрозрачный черный фон */
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto; /* 15% сверху и центр по горизонтали */
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%; /* Ширина */
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Список пользователей</h1>
+    <div class="user-list" id="user-list">
+        {% for user in users %}
+            <div class="user">
+                <h3>{{ user.username }}</h3>
+                <button onclick="openMessageModal('{{ user.id }}')">Отправить сообщение</button>
+            </div>
+        {% empty %}
+            <li>Нет доступных пользователей.</li>
+        {% endfor %}
+    </div>
+
+    <a href="{% url 'group_chat_page' %}">Назад к групповым чатам</a> <!-- Ссылка для возврата -->
+
+    <!-- Модальное окно для отправки сообщения -->
+    <div id="messageModal" class="modal">
+        <div class="modal-content">
+            <span onclick="closeMessageModal()" style="cursor:pointer; float:right;">&times;</span>
+            <h2>Отправить сообщение</h2>
+            <textarea id="message" placeholder="Введите сообщение..." required></textarea>
+            <button id="send-message" onclick="sendMessage()">Отправить</button>
+        </div>
+    </div>
+
+    <script>
+        let currentUserId = null; // Переменная для хранения текущего пользователя
+
+        function openMessageModal(userId) {
+            currentUserId = userId; // Сохраняем ID пользователя
+            document.getElementById('messageModal').style.display = "block"; // Показываем модальное окно
+        }
+
+        function closeMessageModal() {
+            document.getElementById('messageModal').style.display = "none"; // Скрываем модальное окно
+            document.getElementById('message').value = ''; // Очищаем поле ввода
+        }
+
+        async function sendMessage() {
+            const messageContent = document.getElementById('message').value;
+            if (messageContent.trim() === '') return; // Проверка на пустое сообщение
+
+            const response = await fetch(`http://localhost:8000/chat/api/group-chats/${currentUserId}/send-message/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken'), // Добавляем CSRF-токен в заголовок
+                    'Authorization': 'Bearer ' + localStorage.getItem('access_token'), // Если требуется авторизация
+                },
+                body: JSON.stringify({ content: messageContent }), // Отправляем сообщение
+            });
+
+            if (response.ok) {
+                alert('Сообщение отправлено!'); // Уведомление об успешной отправке
+                closeMessageModal(); // Закрываем модальное окно
+            } else {
+                const errorText = await response.text();
+                console.error('Ошибка отправки сообщения:', errorText);
+                alert('Ошибка отправки сообщения: ' + errorText); // Сообщение пользователю
+            }
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+
+</body>
+</html>

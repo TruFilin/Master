@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Групповые Чаты</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        .chat-list {
+            margin-bottom: 20px;
+        }
+        .chat {
+            padding: 10px;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px;
+            background-color: #5cb85c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+        button:hover {
+            background-color: #4cae4c;
+        }
+        .action-buttons {
+            margin-bottom: 20px;
+        }
+        .action-buttons button {
+            margin-right: 10px; /* Отступ между кнопками */
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Групповые Чаты</h1>
+
+    <!-- Контейнер для кнопок -->
+    <div class="action-buttons">
+        <a href="{% url 'user_list' %}" style="text-decoration: none;">
+            <button>Список пользователей</button>
+        </a>
+        <a href="{% url 'edit_profile' %}" style="text-decoration: none;">
+            <button>Личный кабинет</button>
+        </a>
+    </div>
+
+    <div class="chat-list" id="chat-list">
+        {% for chat in chats %}
+            <div class="chat">
+                <h3>{{ chat.name }}</h3>
+                <p>Участники: {{ chat.members.all|join:", " }}</p>
+                <button onclick="joinChat('{{ chat.id }}')">Войти в чат</button>
+                <button onclick="deleteChat('{{ chat.id }}')">Удалить чат</button> <!-- Кнопка для удаления -->
+            </div>
+        {% empty %}
+            <p>Нет доступных групповых чатов.</p>
+        {% endfor %}
+    </div>
+
+    <h2>Создать новый групповой чат</h2>
+    <input type="text" id="chat-name" placeholder="Имя чата" required>
+    <button id="create-chat">Создать чат</button>
+
+    <script>
+        // Функция для входа в чат
+        function joinChat(chatId) {
+            window.location.href = `/chat/group-chats/${chatId}/`; // Перенаправление на страницу чата
+        }
+
+        // Функция для удаления чата
+        async function deleteChat(chatId) {
+            const csrftoken = getCookie('csrftoken');  // Получаем CSRF-токен
+
+            const response = await fetch(`http://localhost:8000/chat/api/group-chats/${chatId}/delete/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken,  // Добавляем CSRF-токен в заголовок
+                    'Authorization': 'Bearer ' + localStorage.getItem('access_token'), // Если требуется авторизация
+                },
+            });
+
+            if (response.ok) {
+                window.location.reload(); // Обновляем страницу после удаления чата
+            } else {
+                console.error('Ошибка удаления чата:', await response.text());
+            }
+        }
+
+        // Логика для создания нового чата
+        document.getElementById('create-chat').addEventListener('click', async function() {
+            const chatName = document.getElementById('chat-name').value;
+            const csrftoken = getCookie('csrftoken');  // Получаем CSRF-токен
+
+            const response = await fetch('http://localhost:8000/chat/api/group-chats/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken,  // Добавляем CSRF-токен в заголовок
+                    'Authorization': 'Bearer ' + localStorage.getItem('access_token'),
+                },
+                body: JSON.stringify({ name: chatName }),
+            });
+
+            if (response.ok) {
+                window.location.reload(); // Обновляем страницу после создания чата
+            } else {
+                const errorText = await response.text();
+                console.error('Ошибка создания чата:', errorText);
+                alert('Ошибка создания чата: ' + errorText); // Сообщение пользователю
+            }
+        });
+
+        // Функция для получения CSRF-токена
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+
+</body>
+</html>
